@@ -12,9 +12,12 @@ The script assumes that the `Pull Request #233: ICAT schema extension
 with columns for investigation and dataset sizes`__ has been merged in
 the icat.server the script talks to.
 
+The script requires python-icat >= 0.17.0.
+
 .. __: https://github.com/icatproject/icat.server/pull/233
 """
 
+from distutils.version import StrictVersion as Version
 import logging
 import icat
 import icat.config
@@ -29,6 +32,10 @@ client, conf = config.getconfig()
 client.login(conf.auth, conf.credentials)
 
 log = logging.getLogger(__name__)
+
+if Version(icat.__version__) < '0.17':
+    raise RuntimeError("Your python-icat version %s is too old, "
+                       "need 0.17.0 or newer" % icat.__version__)
 
 if not ('investigationSize' in client.typemap['investigation'].InstAttr and
         'datasetSize' in client.typemap['dataset'].InstAttr):
