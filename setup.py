@@ -17,5 +17,6 @@ setup(
     long_description = "\n".join(doclines[2:]),
     url = "https://github.com/icatproject-contrib/scripts",
     license = "Apache-2.0",
+    scripts = ["scripts/check-sizes.py"]
 )
 
