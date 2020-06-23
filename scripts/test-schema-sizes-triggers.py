@@ -94,7 +94,7 @@ class TestBase:
     Case_No = None
     Description = None
     Num_Datasets = 100
-    Num_Datafiles = 100
+    Num_Datafiles = 1000
     FileSize = 997
 
     @staticmethod
