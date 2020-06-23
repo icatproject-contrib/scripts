@@ -142,6 +142,7 @@ class TestBase:
         total_time = 0
         log.info("%s: %s", self.Name, self.Description)
         for ds_count in range(self.Num_Datasets):
+            client.autoRefresh()
             ds_name = "test_%d_%04d" % (self.Case_No, ds_count)
             dataset, elapsed = self.run_dataset(ds_name)
             if min_time is None or elapsed < min_time:
