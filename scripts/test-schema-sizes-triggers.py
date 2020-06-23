@@ -120,7 +120,7 @@ class TestBase:
     def __init__(self, invid):
         self.investigation = self._get_investigation(invid)
         self.inv_name = "Investigation(%s)" % invid
-        self.inv_size = (self.investigation.investigationSize
+        self.inv_size = (self.investigation.investigationSize or 0
                          if have_size_attrs
                          else 0)
         query = Query(client, "DatasetType", conditions={"name": "= 'other'"})
