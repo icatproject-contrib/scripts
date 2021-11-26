@@ -25,48 +25,54 @@ from icat.query import Query
 
 log = logging.getLogger(__name__)
 
+def check_dataset(ds):
+    client = ds.client
+    ds_name = "Dataset(%s / %s / %s)" % (inv.name, inv.visitId, ds.name)
+    log.debug("Considering %s", ds_name)
+    fileCount_query = Query(client, "Datafile", conditions={
+        "dataset.id": "= %d" % ds.id
+    }, aggregate="COUNT")
+    fileCount = client.assertedSearch(fileCount_query)[0]
+    if not fileCount:
+        log.debug("%s has no datafiles", ds_name)
+        fileSize = 0
+        if ds.fileCount:
+            log.warn("%s: fileCount is wrong: %d versus %d",
+                     ds_name, ds.fileCount, 0)
+        if ds.fileSize:
+            log.warn("%s: fileSize is wrong: %d versus %d",
+                     ds_name, ds.fileSize, 0)
+    else:
+        fileSize_query = Query(client, "Datafile", conditions={
+            "dataset.id": "= %d" % ds.id
+        }, attribute="fileSize", aggregate="SUM")
+        fileSize = client.assertedSearch(fileSize_query)[0]
+        if ds.fileCount is None:
+            log.warn("%s: fileCount is not set", ds_name)
+        elif ds.fileCount != fileCount:
+            log.warn("%s: fileCount is wrong: %d versus %d",
+                     ds_name, ds.fileCount, fileCount)
+        if ds.fileSize is None:
+            log.warn("%s: fileSize is not set", ds_name)
+        elif ds.fileSize != fileSize:
+            log.warn("%s: fileSize is wrong: %d versus %d",
+                     ds_name, ds.fileSize, fileSize)
+    return fileCount, fileSize
+
 def check_investigation(inv):
     client = inv.client
     inv_name = "Investigation(%s / %s)" % (inv.name, inv.visitId)
     log.debug("Check sizes in %s", inv_name)
-    inv_fileCount = 0
-    inv_fileSize = 0
+    fileCount = 0
+    fileSize = 0
     ds_select = Query(client, "Dataset", conditions={
         "investigation.id": "= %d" % inv.id
     })
     for ds in client.searchChunked(ds_select):
-        ds_name = "Dataset(%s / %s / %s)" % (inv.name, inv.visitId, ds.name)
-        log.debug("Considering %s", ds_name)
-        fileCount_query = Query(client, "Datafile", conditions={
-            "dataset.id": "= %d" % ds.id
-        }, aggregate="COUNT")
-        ds_fileCount = client.assertedSearch(fileCount_query)[0]
-        if not ds_fileCount:
-            log.debug("%s has no datafiles", ds_name)
-            if ds.fileCount:
-                log.warn("%s: fileCount is wrong: %d versus %d",
-                         ds_name, ds.fileCount, 0)
-            if ds.fileSize:
-                log.warn("%s: fileSize is wrong: %d versus %d",
-                         ds_name, ds.fileSize, 0)
-        else:
-            fileSize_query = Query(client, "Datafile", conditions={
-                "dataset.id": "= %d" % ds.id
-            }, attribute="fileSize", aggregate="SUM")
-            ds_fileSize = client.assertedSearch(fileSize_query)[0]
-            inv_fileCount += ds_fileCount
-            inv_fileSize += ds_fileSize
-            if ds.fileCount is None:
-                log.warn("%s: fileCount is not set", ds_name)
-            elif ds.fileCount != ds_fileCount:
-                log.warn("%s: fileCount is wrong: %d versus %d",
-                         ds_name, ds.fileCount, ds_fileCount)
-            if ds.fileSize is None:
-                log.warn("%s: fileSize is not set", ds_name)
-            elif ds.fileSize != ds_fileSize:
-                log.warn("%s: fileSize is wrong: %d versus %d",
-                         ds_name, ds.fileSize, ds_fileSize)
-    if not inv_fileCount:
+        ds_c, ds_s = check_dataset(ds)
+        fileCount += ds_c
+        fileSize += ds_s
+    if not fileCount:
         log.debug("%s has no datafiles", inv_name)
         if inv.fileCount:
             log.warn("%s: fileCount is wrong: %d versus %d",
@@ -77,14 +83,14 @@ def check_investigation(inv):
     else:
         if inv.fileCount is None:
             log.warn("%s: fileCount is not set", inv_name)
-        elif inv.fileCount != inv_fileCount:
+        elif inv.fileCount != fileCount:
             log.warn("%s: fileCount is wrong: %d versus %d",
-                     inv_name, inv.fileCount, inv_fileCount)
+                     inv_name, inv.fileCount, fileCount)
         if inv.fileSize is None:
             log.warn("%s: fileSize is not set", inv_name)
-        elif inv.fileSize != inv_fileSize:
+        elif inv.fileSize != fileSize:
             log.warn("%s: fileSize is wrong: %d versus %d",
-                     inv_name, inv.fileSize, inv_fileSize)
+                     inv_name, inv.fileSize, fileSize)
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
