@@ -29,37 +29,62 @@ def check_investigation(inv):
     client = inv.client
     inv_name = "Investigation(%s / %s)" % (inv.name, inv.visitId)
     log.debug("Check sizes in %s", inv_name)
-    inv_size = 0
+    inv_fileCount = 0
+    inv_fileSize = 0
     ds_select = Query(client, "Dataset", conditions={
         "investigation.id": "= %d" % inv.id
     })
     for ds in client.searchChunked(ds_select):
         ds_name = "Dataset(%s / %s / %s)" % (inv.name, inv.visitId, ds.name)
         log.debug("Considering %s", ds_name)
-        ds_file_count_query = Query(client, "Datafile", conditions={
+        fileCount_query = Query(client, "Datafile", conditions={
             "dataset.id": "= %d" % ds.id
         }, aggregate="COUNT")
-        if not client.assertedSearch(ds_file_count_query)[0]:
+        ds_fileCount = client.assertedSearch(fileCount_query)[0]
+        if not ds_fileCount:
             log.debug("%s has no datafiles", ds_name)
+            if ds.fileCount:
+                log.warn("%s: fileCount is wrong: %d versus %d",
+                         ds_name, ds.fileCount, 0)
             if ds.fileSize:
                 log.warn("%s: fileSize is wrong: %d versus %d",
                          ds_name, ds.fileSize, 0)
         else:
-            ds_size_query = Query(client, "Datafile", conditions={
+            fileSize_query = Query(client, "Datafile", conditions={
                 "dataset.id": "= %d" % ds.id
             }, attribute="fileSize", aggregate="SUM")
-            ds_size = client.assertedSearch(ds_size_query)[0]
-            inv_size += ds_size
+            ds_fileSize = client.assertedSearch(fileSize_query)[0]
+            inv_fileCount += ds_fileCount
+            inv_fileSize += ds_fileSize
+            if ds.fileCount is None:
+                log.warn("%s: fileCount is not set", ds_name)
+            elif ds.fileCount != ds_fileCount:
+                log.warn("%s: fileCount is wrong: %d versus %d",
+                         ds_name, ds.fileCount, ds_fileCount)
             if ds.fileSize is None:
                 log.warn("%s: fileSize is not set", ds_name)
-            elif ds.fileSize != ds_size:
+            elif ds.fileSize != ds_fileSize:
                 log.warn("%s: fileSize is wrong: %d versus %d",
-                         ds_name, ds.fileSize, ds_size)
-    if inv.fileSize is None:
-        log.warn("%s: fileSize is not set", inv_name)
-    elif inv.fileSize != inv_size:
-        log.warn("%s: fileSize is wrong: %d versus %d",
-                 inv_name, inv.fileSize, inv_size)
+                         ds_name, ds.fileSize, ds_fileSize)
+    if not inv_fileCount:
+        log.debug("%s has no datafiles", inv_name)
+        if inv.fileCount:
+            log.warn("%s: fileCount is wrong: %d versus %d",
+                     inv_name, inv.fileCount, 0)
+        if inv.fileSize:
+            log.warn("%s: fileSize is wrong: %d versus %d",
+                     inv_name, inv.fileSize, 0)
+    else:
+        if inv.fileCount is None:
+            log.warn("%s: fileCount is not set", inv_name)
+        elif inv.fileCount != inv_fileCount:
+            log.warn("%s: fileCount is wrong: %d versus %d",
+                     inv_name, inv.fileCount, inv_fileCount)
+        if inv.fileSize is None:
+            log.warn("%s: fileSize is not set", inv_name)
+        elif inv.fileSize != inv_fileSize:
+            log.warn("%s: fileSize is wrong: %d versus %d",
+                     inv_name, inv.fileSize, inv_fileSize)
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -75,7 +100,9 @@ def main():
                            "need 0.17.0 or newer" % icat.__version__)
 
     if not ('fileSize' in client.typemap['investigation'].InstAttr and
-            'fileSize' in client.typemap['dataset'].InstAttr):
+            'fileCount' in client.typemap['investigation'].InstAttr and
+            'fileSize' in client.typemap['dataset'].InstAttr and
+            'fileCount' in client.typemap['dataset'].InstAttr):
         raise RuntimeError("This ICAT server does not support the size "
                            "attributes in Datasets and Investigations")
 
