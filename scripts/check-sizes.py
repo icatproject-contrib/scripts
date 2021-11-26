@@ -2,8 +2,8 @@
 """Verify the size attributes in Datasets and Investigations.
 
 This script checks all Datasets and Investigations and verifies the
-values of the size attributes Dataset.datasetSize and
-Investigation.investigationSize respectively.
+values of the size attributes Dataset.fileSize and
+Investigation.fileSize respectively.
 
 The script needs to be run by an ICAT user having read access to all
 Investigations, Datasets, and Datafiles.
@@ -37,8 +37,8 @@ if Version(icat.__version__) < '0.17':
     raise RuntimeError("Your python-icat version %s is too old, "
                        "need 0.17.0 or newer" % icat.__version__)
 
-if not ('investigationSize' in client.typemap['investigation'].InstAttr and
-        'datasetSize' in client.typemap['dataset'].InstAttr):
+if not ('fileSize' in client.typemap['investigation'].InstAttr and
+        'fileSize' in client.typemap['dataset'].InstAttr):
     raise RuntimeError("This ICAT server does not support the size "
                        "attributes in Datasets and Investigations")
 
@@ -58,22 +58,22 @@ for inv in client.searchChunked(inv_select):
         }, aggregate="COUNT")
         if not client.assertedSearch(ds_file_count_query)[0]:
             log.debug("%s has no datafiles", ds_name)
-            if ds.datasetSize:
-                log.warn("%s: datasetSize is wrong: %d versus %d",
-                         ds_name, ds.datasetSize, 0)
+            if ds.fileSize:
+                log.warn("%s: fileSize is wrong: %d versus %d",
+                         ds_name, ds.fileSize, 0)
         else:
             ds_size_query = Query(client, "Datafile", conditions={
                 "dataset.id": "= %d" % ds.id
             }, attribute="fileSize", aggregate="SUM")
             ds_size = client.assertedSearch(ds_size_query)[0]
             inv_size += ds_size
-            if ds.datasetSize is None:
-                log.warn("%s: datasetSize is not set", ds_name)
-            elif ds.datasetSize != ds_size:
-                log.warn("%s: datasetSize is wrong: %d versus %d",
-                         ds_name, ds.datasetSize, ds_size)
-    if inv.investigationSize is None:
-        log.warn("%s: investigationSize is not set", inv_name)
-    elif inv.investigationSize != inv_size:
-        log.warn("%s: investigationSize is wrong: %d versus %d",
-                 inv_name, inv.investigationSize, inv_size)
+            if ds.fileSize is None:
+                log.warn("%s: fileSize is not set", ds_name)
+            elif ds.fileSize != ds_size:
+                log.warn("%s: fileSize is wrong: %d versus %d",
+                         ds_name, ds.fileSize, ds_size)
+    if inv.fileSize is None:
+        log.warn("%s: fileSize is not set", inv_name)
+    elif inv.fileSize != inv_size:
+        log.warn("%s: fileSize is wrong: %d versus %d",
+                 inv_name, inv.fileSize, inv_size)
