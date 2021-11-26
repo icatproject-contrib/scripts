@@ -2,19 +2,22 @@
 """Verify the size attributes in Datasets and Investigations.
 
 This script checks all Datasets and Investigations and verifies the
-values of the size attributes Dataset.fileSize and
-Investigation.fileSize respectively.
+values of the fileCount and fileSize attributes respectively.
 
 The script needs to be run by an ICAT user having read access to all
 Investigations, Datasets, and Datafiles.
 
-The script assumes that the `Pull Request #233: ICAT schema extension
-with columns for investigation and dataset sizes`__ has been merged in
-the icat.server the script talks to.
+Note that the size attributes are expected to be in the next major
+release of icat.server 5.0, but are not yet present in any release
+version so far.  The script is based on the implementation of `Pull
+Request #256: ICAT schema extensions for ICAT Server 5.0 release`__ as
+of 2021-11-26.  The final implementation in a future release version
+may differ.
 
 The script requires python-icat >= 0.18.0.
 
-.. __: https://github.com/icatproject/icat.server/pull/233
+.. __: https://github.com/icatproject/icat.server/pull/256
+
 """
 
 from distutils.version import StrictVersion as Version
