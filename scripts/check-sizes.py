@@ -12,7 +12,7 @@ The script assumes that the `Pull Request #233: ICAT schema extension
 with columns for investigation and dataset sizes`__ has been merged in
 the icat.server the script talks to.
 
-The script requires python-icat >= 0.17.0.
+The script requires python-icat >= 0.18.0.
 
 .. __: https://github.com/icatproject/icat.server/pull/233
 """
@@ -25,7 +25,7 @@ from icat.query import Query
 
 log = logging.getLogger(__name__)
 
-def check_dataset(ds):
+def check_dataset(inv, ds):
     client = ds.client
     ds_name = "Dataset(%s / %s / %s)" % (inv.name, inv.visitId, ds.name)
     log.debug("Considering %s", ds_name)
@@ -45,7 +45,7 @@ def check_dataset(ds):
     else:
         fileSize_query = Query(client, "Datafile", conditions={
             "dataset.id": "= %d" % ds.id
-        }, attribute="fileSize", aggregate="SUM")
+        }, attributes="fileSize", aggregate="SUM")
         fileSize = client.assertedSearch(fileSize_query)[0]
         if ds.fileCount is None:
             log.warn("%s: fileCount is not set", ds_name)
@@ -69,7 +69,7 @@ def check_investigation(inv):
         "investigation.id": "= %d" % inv.id
     })
     for ds in client.searchChunked(ds_select):
-        ds_c, ds_s = check_dataset(ds)
+        ds_c, ds_s = check_dataset(inv, ds)
         fileCount += ds_c
         fileSize += ds_s
     if not fileCount:
@@ -101,9 +101,9 @@ def main():
     client, conf = config.getconfig()
     client.login(conf.auth, conf.credentials)
 
-    if Version(icat.__version__) < '0.17':
+    if Version(icat.__version__) < '0.18':
         raise RuntimeError("Your python-icat version %s is too old, "
-                           "need 0.17.0 or newer" % icat.__version__)
+                           "need 0.18.0 or newer" % icat.__version__)
 
     if not ('fileSize' in client.typemap['investigation'].InstAttr and
             'fileCount' in client.typemap['investigation'].InstAttr and
