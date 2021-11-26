@@ -23,27 +23,10 @@ import icat
 import icat.config
 from icat.query import Query
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-# suds is somewhat too chatty
-logging.getLogger('suds').setLevel(logging.WARN)
-
-config = icat.config.Config(ids=False)
-client, conf = config.getconfig()
-client.login(conf.auth, conf.credentials)
-
 log = logging.getLogger(__name__)
 
-if Version(icat.__version__) < '0.17':
-    raise RuntimeError("Your python-icat version %s is too old, "
-                       "need 0.17.0 or newer" % icat.__version__)
-
-if not ('fileSize' in client.typemap['investigation'].InstAttr and
-        'fileSize' in client.typemap['dataset'].InstAttr):
-    raise RuntimeError("This ICAT server does not support the size "
-                       "attributes in Datasets and Investigations")
-
-inv_select = Query(client, "Investigation")
-for inv in client.searchChunked(inv_select):
+def check_investigation(inv):
+    client = inv.client
     inv_name = "Investigation(%s / %s)" % (inv.name, inv.visitId)
     log.debug("Check sizes in %s", inv_name)
     inv_size = 0
@@ -77,3 +60,27 @@ for inv in client.searchChunked(inv_select):
     elif inv.fileSize != inv_size:
         log.warn("%s: fileSize is wrong: %d versus %d",
                  inv_name, inv.fileSize, inv_size)
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    # suds is somewhat too chatty
+    logging.getLogger('suds').setLevel(logging.WARN)
+
+    config = icat.config.Config(ids=False)
+    client, conf = config.getconfig()
+    client.login(conf.auth, conf.credentials)
+
+    if Version(icat.__version__) < '0.17':
+        raise RuntimeError("Your python-icat version %s is too old, "
+                           "need 0.17.0 or newer" % icat.__version__)
+
+    if not ('fileSize' in client.typemap['investigation'].InstAttr and
+            'fileSize' in client.typemap['dataset'].InstAttr):
+        raise RuntimeError("This ICAT server does not support the size "
+                           "attributes in Datasets and Investigations")
+
+    for inv in client.searchChunked(Query(client, "Investigation")):
+        check_investigation(inv)
+
+if __name__ == "__main__":
+    main()
