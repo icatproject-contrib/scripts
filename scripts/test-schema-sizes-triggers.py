@@ -1,12 +1,12 @@
 #! /usr/bin/python3
 """Test size attributes.
 
-`PR #233`_ adds the size attributes `Dataset.datasetSize` and
-`Investigation.investigationSize` to icat.server, along with database
-triggers to keep them up to date.  This script intends to test that
-the triggers work as expected and to assess the performance.  The
-script may also used with the current release version of icat.server
-not having the attributes and triggers in order to measure a reference
+`PR #256`_ adds the attributes fileCount and fileSize to Investigation
+and Dataset respectively in icat.server, along with database triggers
+to keep them up to date.  This script intends to test that the
+triggers work as expected and to assess the performance.  The script
+may also used with the current release version of icat.server not
+having the attributes and triggers in order to measure a reference
 timing.
 
 The script requires an investigation to be present in ICAT to create
@@ -33,7 +33,7 @@ The tests consider four test cases:
 
 The script requires python-icat >= 0.17.0.
 
-.. _PR #233: https://github.com/icatproject/icat.server/pull/233
+.. _PR #256: https://github.com/icatproject/icat.server/pull/256
 """
 
 import logging
@@ -54,8 +54,10 @@ client, conf = config.getconfig()
 client.login(conf.auth, conf.credentials)
 
 have_size_attrs = (
-    'investigationSize' in client.typemap['investigation'].InstAttr and
-    'datasetSize' in client.typemap['dataset'].InstAttr
+    'fileSize' in client.typemap['investigation'].InstAttr and
+    'fileCount' in client.typemap['investigation'].InstAttr and
+    'fileSize' in client.typemap['dataset'].InstAttr and
+    'fileCount' in client.typemap['dataset'].InstAttr
 )
 
 
@@ -120,8 +122,10 @@ class TestBase:
     def __init__(self, invid):
         self.investigation = self._get_investigation(invid)
         self.inv_name = "Investigation(%s)" % invid
-        self.inv_size = ((have_size_attrs and
-                          self.investigation.investigationSize) or 0)
+        self.inv_fileCount = ((have_size_attrs and
+                               self.investigation.fileCount) or 0)
+        self.inv_fileSize = ((have_size_attrs and
+                              self.investigation.fileSize) or 0)
         query = Query(client, "DatasetType", conditions={"name": "= 'other'"})
         self.ds_type = client.assertedSearch(query)[0]
 
@@ -152,18 +156,28 @@ class TestBase:
             if have_size_attrs:
                 ds_size = self.Num_Datafiles * self.FileSize
                 dataset.get("Dataset")
-                if dataset.datasetSize != ds_size:
-                    log.warn("%s: datasetSize is wrong: %d versus %d",
-                             dataset.name, dataset.datasetSize, ds_size)
+                if dataset.fileCount != self.Num_Datafiles:
+                    log.warn("%s: fileCount is wrong: %d versus %d",
+                             dataset.name,
+                             dataset.fileCount, self.Num_Datafiles)
+                if dataset.fileSize != ds_size:
+                    log.warn("%s: fileSize is wrong: %d versus %d",
+                             dataset.name, dataset.fileSize, ds_size)
         if have_size_attrs:
             ds_size = self.Num_Datafiles * self.FileSize
-            self.inv_size += self.Num_Datasets * ds_size
+            self.inv_fileCount += self.Num_Datasets * self.Num_Datafiles
+            self.inv_fileSize += self.Num_Datasets * ds_size
             self.investigation.get("Investigation")
-            if self.investigation.investigationSize != self.inv_size:
-                log.warn("%s: investigationSize is wrong: %d versus %d",
+            if self.investigation.fileCount != self.inv_fileCount:
+                log.warn("%s: fileCount is wrong: %d versus %d",
                          self.inv_name,
-                         self.investigation.investigationSize,
-                         self.inv_size)
+                         self.investigation.fileCount,
+                         self.inv_fileCount)
+            if self.investigation.fileSize != self.inv_fileSize:
+                log.warn("%s: fileSize is wrong: %d versus %d",
+                         self.inv_name,
+                         self.investigation.fileSize,
+                         self.inv_fileSize)
         avg_time = total_time / self.Num_Datasets
         log.info("%s: done %d datasets having %d datafiles each",
                  self.Name, self.Num_Datasets, self.Num_Datafiles)
@@ -261,7 +275,8 @@ class TestCase4(TestBase):
         })
         dataset = client.assertedSearch(query)[0]
         if have_size_attrs:
-            self.inv_size -= dataset.datasetSize
+            self.inv_fileCount -= dataset.fileCount
+            self.inv_fileSize -= dataset.fileSize
         query = Query(client, "Datafile", conditions={
             "dataset.id": "= %d" % dataset.id
         }, includes="1")
