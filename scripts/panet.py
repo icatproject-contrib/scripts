@@ -1,8 +1,8 @@
 #! /usr/bin/python3
 """Populate the ICAT Technique table from PaNET.
 
-Theis script reads the PaNET ontology as an OWL file and populates the
-ICAT Techniques table, creates one entry for each term in PaNET
+This script reads the PaNET ontology as an OWL file and populates the
+ICAT Techniques table, creating one entry for each term in PaNET
 (excluding the generic root PaNET00001).  The pid attribute is set to
 "PaNET:PaNETxxxxx", assuming it is well known that the "PaNET" name
 space stands for http://purl.org/pan-science/PaNET/.
