@@ -25,7 +25,7 @@ Required library packages:
 Copyright and License
 ---------------------
 
-Copyright 2020 The ICAT Collaboration
+Copyright 2020–2022 The ICAT Collaboration
 
 Licensed under the `Apache License`_, Version 2.0 (the "License"); you
 may not use this file except in compliance with the License.

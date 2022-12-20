@@ -20,6 +20,7 @@ setup(
     scripts = [
         "scripts/check-sizes.py",
         "scripts/test-schema-sizes-triggers.py",
+        "scripts/panet.py",
     ]
 )
 
