@@ -19,9 +19,9 @@ your ids.server uses twolevel storage, is not readOnly, that the
 storage unit in your ids.server is "dataset", and
 delayDatasetWritesSeconds is set to 60 (the default).
 
-Please be aware that if your ids.server is susceptible
-to the bug, you may need to restart ids.server after running the
-script.
+Please be aware that if your ids.server is susceptible to the bug,
+running the script will crash its FSM thread, so you'll need to
+restart ids.server.
 
 .. __: https://github.com/icatproject/ids.server/issues/164
 """
