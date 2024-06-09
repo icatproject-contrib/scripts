@@ -2,10 +2,10 @@
 """Check for bug 164 in ids.server.
 
 There is a `bug`__ in class `LockManager` that may cause that the
-`mainStorage.lock()` may be called multiple times for the same
-dataset, which may result in an `OverlappingFileLockException`
-exception to be thrown (depending on the implementation of
-`mainStorage.lock()`).
+`mainStorage.lock()` method of the storage plugin may be called
+multiple times for the same dataset, which may result in an
+`OverlappingFileLockException` exception to be thrown (depending on
+the implementation of `mainStorage.lock()`).
 
 This script triggers the bug and thus checks whether your ids.server
 is affected.  The bug is not visible from outside, so this script
@@ -14,8 +14,9 @@ a trace in your server.log.
 
 The script uploads a new dataset to an investigation.  It is assumed
 that the investigation is unique by its name and has no dataset with
-the name "test-upload-ids-bug164".  It is furthermore assumed that the
-storage unit in your ids.server is "dataset" and
+the name "test-upload-ids-bug164".  It is furthermore assumed that
+your ids.server uses twolevel storage, is not readOnly, that the
+storage unit in your ids.server is "dataset", and
 delayDatasetWritesSeconds is set to 60 (the default).
 
 Please be aware that if your ids.server is susceptible
