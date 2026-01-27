@@ -125,11 +125,11 @@ def cfg_stats(subcmd):
                                    dict(help=help_string),
                                    func=cmd_stats)
 
-# =========================== duplicates =============================
-# The duplicates subcommand: find duplicates, e.g. different samples
-# having the same pid value.
+# ============================= lsdup ================================
+# The lsdup subcommand: show duplicates, e.g. different samples having
+# the same pid value.
 
-def cmd_dup(client, conf):
+def cmd_lsdup(client, conf):
     num_dup_pid = 0
     for pid in find_duplicate_pids(client):
         num_dup_pid += 1
@@ -145,11 +145,11 @@ def cmd_dup(client, conf):
     else:
         logger.info("no duplicate pids found")
 
-def cfg_dup(subcmd):
-    help_string = "find duplicates, e.g. samples having the same pid attributes"
-    sub_cfg = subcmd.add_subconfig("duplicates",
+def cfg_lsdup(subcmd):
+    help_string = "show duplicates, e.g. samples having the same pid attributes"
+    sub_cfg = subcmd.add_subconfig("lsdup",
                                    dict(help=help_string),
-                                   func=cmd_dup)
+                                   func=cmd_lsdup)
 
 # ============================== main ================================
 
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     config = icat.config.Config(ids=False)
     subcmd = config.add_subcommands()
     cfg_stats(subcmd)
-    cfg_dup(subcmd)
+    cfg_lsdup(subcmd)
     client, conf = config.getconfig()
     client.login(conf.auth, conf.credentials)
     conf.subcmd.func(client, conf)
