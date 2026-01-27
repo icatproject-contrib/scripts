@@ -43,6 +43,28 @@ def find_potential_upgrade_conflicts(client, prefix):
         if int(i) != sample.id:
             yield sample.id, pid
 
+def find_duplicate_pids(client):
+    pid_query = Query(client, "Sample", conditions={
+        "pid": "IS NOT NULL"
+    }, attributes=["pid"], order=["pid"], aggregate="DISTINCT")
+    for pid in client.searchChunked(pid_query):
+        count_query = Query(client, "Sample", conditions={
+            "pid": "= '%s'" % pid
+        }, aggregate="COUNT")
+        if client.assertedSearch(count_query)[0] == 1:
+            continue
+        yield pid
+
+def sample_attr_string(sample):
+    attrs = []
+    attrs.append("id:%d" % sample.id)
+    attrs.append("name:'%s'" % sample.name)
+    attrs.append("investigation.name:'%s'" % sample.investigation.name)
+    attrs.append("investigation.visitId:'%s'" % sample.investigation.visitId)
+    if sample.type:
+        attrs.append("type.name:'%s'" % sample.type.name)
+    return ", ".join(attrs)
+
 # ============================= stats ================================
 # The stats subcommand: provide some statistics and predict whether
 # there are any obstacles for the schema upgrade.
@@ -103,6 +125,32 @@ def cfg_stats(subcmd):
                                    dict(help=help_string),
                                    func=cmd_stats)
 
+# =========================== duplicates =============================
+# The duplicates subcommand: find duplicates, e.g. different samples
+# having the same pid value.
+
+def cmd_dup(client, conf):
+    num_dup_pid = 0
+    for pid in find_duplicate_pids(client):
+        num_dup_pid += 1
+        query = Query(client, "Sample", conditions={
+            "pid": "= '%s'" % pid
+        }, order=["id"], includes=["investigation", "type"])
+        dup_list = ""
+        for sample in client.searchChunked(query):
+            dup_list += "\n\t%s" % sample_attr_string(sample)
+        logger.warning("duplicate pid '%s': %s", pid, dup_list)
+    if num_dup_pid:
+        logger.warning("%d duplicate pids found", num_dup_pid)
+    else:
+        logger.info("no duplicate pids found")
+
+def cfg_dup(subcmd):
+    help_string = "find duplicates, e.g. samples having the same pid attributes"
+    sub_cfg = subcmd.add_subconfig("duplicates",
+                                   dict(help=help_string),
+                                   func=cmd_dup)
+
 # ============================== main ================================
 
 if __name__ == '__main__':
@@ -112,6 +160,7 @@ if __name__ == '__main__':
     config = icat.config.Config(ids=False)
     subcmd = config.add_subcommands()
     cfg_stats(subcmd)
+    cfg_dup(subcmd)
     client, conf = config.getconfig()
     client.login(conf.auth, conf.credentials)
     conf.subcmd.func(client, conf)
