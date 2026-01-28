@@ -77,6 +77,16 @@ def find_potential_upgrade_conflicts(client, prefix):
         if int(i) != sample.id:
             yield sample.id, pid
 
+def find_potential_dedup_conflicts(client, pid):
+    auto_pid_re = re.compile(r"%s/dedup-\d+" % pid)
+    query = Query(client, "Sample", conditions={
+        "pid": "LIKE '%s/%%'" % pid
+    })
+    for sample in client.searchChunked(query):
+        if not auto_pid_re.fullmatch(str(sample.pid)):
+            continue
+        yield sample.id, sample.pid
+
 def find_duplicate_pids(client):
     pid_query = Query(client, "Sample", conditions={
         "pid": "IS NOT NULL"
@@ -224,6 +234,48 @@ def cfg_setpids(subcmd):
                               "creating new conflicts"),
                          default=False, type=icat.config.flag)
 
+# ============================= dedup ================================
+# The dedup subcommand: deduplicate pid values.
+
+def cmd_dedup(client, conf):
+    num_dedup_pid = 0
+    for pid in list(find_duplicate_pids(client)):
+        have_warning = False
+        for id, pid2 in find_potential_dedup_conflicts(client, pid):
+            logger.warning("potentially conflicting pid value '%s' "
+                           "in Sample %d", pid2, id)
+            have_warning = True
+        if have_warning:
+            if conf.force:
+                logger.warning("potential conflicts detected, "
+                               "proceeding with dedup '%s' anyway with force",
+                               pid)
+            else:
+                logger.warning("potential conflicts detected, "
+                               "won't proceed with dedup '%s' without force",
+                               pid)
+                continue
+        count = 0
+        query = Query(client, "Sample", conditions={
+            "pid": "= '%s'" % pid
+        }, order=["id"], includes="1")
+        for sample in searchChunkedNoSkip(client, query):
+            sample.pid = "%s/dedup-%03d" % (pid, count)
+            sample.update()
+            count += 1
+        num_dedup_pid += 1
+    logger.info("%d pid values deduplicated", num_dedup_pid)
+
+def cfg_dedup(subcmd):
+    help_string = "deduplicate pid values"
+    sub_cfg = subcmd.add_subconfig("dedup",
+                                   dict(help=help_string),
+                                   func=cmd_dedup)
+    sub_cfg.add_variable('force', ("--force",),
+                         dict(help="do it even if there is the risk of "
+                              "creating new conflicts"),
+                         default=False, type=icat.config.flag)
+
 # ============================== main ================================
 
 if __name__ == '__main__':
@@ -235,6 +287,7 @@ if __name__ == '__main__':
     cfg_stats(subcmd)
     cfg_lsdup(subcmd)
     cfg_setpids(subcmd)
+    cfg_dedup(subcmd)
     client, conf = config.getconfig()
     client.login(conf.auth, conf.credentials)
     conf.subcmd.func(client, conf)
