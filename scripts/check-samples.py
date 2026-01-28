@@ -21,6 +21,22 @@ logger = logging.getLogger(__name__)
 
 # ============================= helper ===============================
 
+def searchChunkedNoSkip(client, query, chunksize=100):
+    """A variant of client.searchChunked() that does not skip.
+
+    To be used in cases where the body of the loop modifies the result
+    set in a way that the treated objects do not match the search
+    criterion any more.
+    """
+    query = query.copy()
+    query.setLimit((0, chunksize))
+    while True:
+        items = client.search(query)
+        for item in items:
+            yield item
+        if len(items) < chunksize:
+            break
+
 def get_pid_prefixes(client):
     prefixes = set()
     query = Query(client, "Sample", conditions={
@@ -185,20 +201,14 @@ def cmd_setpids(client, conf):
                            "won't proceed without force")
             return
     num_digits = math.ceil(math.log10(get_max_sample_id(client)))+1
-    # Note: we can't use client.searchChunked() here, because we are
-    # changing the result set in the body of the loop.
     query = Query(client, "Sample", conditions={
         "pid": "IS NULL"
-    }, includes="1", limit=(0, 100))
+    }, includes="1")
     count = 0
-    while True:
-        samples = client.search(query)
-        for sample in samples:
-            sample.pid = "%s:%0*d" % (conf.prefix, num_digits, sample.id)
-            sample.update()
-            count += 1
-        if len(samples) < 100:
-            break
+    for sample in searchChunkedNoSkip(client, query):
+        sample.pid = "%s:%0*d" % (conf.prefix, num_digits, sample.id)
+        sample.update()
+        count += 1
     logger.info("%d pid attributes set", count)
 
 def cfg_setpids(subcmd):
