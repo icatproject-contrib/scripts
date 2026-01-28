@@ -25,15 +25,16 @@ setpids
     prefix is "_local", but this can be changed on the command line.
 
 dedup
-    Deduplicate existing pid values in samples, e.g. change them to
-    make the unique.  This is done by appending a suffix: the value
-    "<pid>" will be changed to "<pid>/dedup-<nnn>" with some
-    incermental number <nnn>.
+    Deduplicate existing pid values in samples, e.g. change them to be
+    unique.  This is done by appending a suffix: the value "<pid>"
+    will be changed to "<pid>/dedup-<nnn>" with some incermental
+    number <nnn>.
 
 For the subcommands that set new pid values (setpids and dedup), the
 script checks whether there are any existing pid values that could
 potentially conflict with the new values to be set before making any
 changes.  In this case, the change will not be applied unless forced.
+
 """
 
 import logging
