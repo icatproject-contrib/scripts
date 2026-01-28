@@ -49,7 +49,7 @@ def get_max_sample_id(client):
             raise
 
 def find_potential_upgrade_conflicts(client, prefix):
-    auto_pid_re = re.compile("%s:\d+" % prefix)
+    auto_pid_re = re.compile(r"%s:\d+" % prefix)
     query = Query(client, "Sample", conditions={
         "pid": "LIKE '%s:%%'" % prefix
     })
