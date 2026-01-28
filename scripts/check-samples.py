@@ -8,6 +8,7 @@ to be populated with unique non-null values.
 """
 
 import logging
+import math
 import re
 import icat
 import icat.config
@@ -35,6 +36,17 @@ def get_samples_by_pid(client, pid):
         "pid": "= '%s'" % pid
     }, order=["id"], includes="1")
     return client.searchChunked(query)
+
+def get_max_sample_id(client):
+    query = Query(client, "Sample",
+                  attributes=["id"], order=[("id", "DESC")], limit=(0, 1))
+    try:
+        return client.assertedSearch(query)[0]
+    except icat.SearchAssertionError as exc:
+        if exc.num == 0:
+            return 1
+        else:
+            raise
 
 def find_potential_upgrade_conflicts(client, prefix):
     auto_pid_re = re.compile("%s:\d+" % prefix)
@@ -154,6 +166,54 @@ def cfg_lsdup(subcmd):
                                    dict(help=help_string),
                                    func=cmd_lsdup)
 
+# ============================ setpids ===============================
+# The setpids subcommand: populate the pid attribute for all samples
+# having it not set.
+
+def cmd_setpids(client, conf):
+    have_warning = False
+    for id, pid in find_potential_upgrade_conflicts(client, conf.prefix):
+        logger.warning("potentially conflicting pid value '%s' "
+                       "in Sample %d", pid, id)
+        have_warning = True
+    if have_warning:
+        if conf.force:
+            logger.warning("potential conflicts detected, "
+                           "proceeding anyway with force")
+        else:
+            logger.warning("potential conflicts detected, "
+                           "won't proceed without force")
+            return
+    num_digits = math.ceil(math.log10(get_max_sample_id(client)))+1
+    # Note: we can't use client.searchChunked() here, because we are
+    # changing the result set in the body of the loop.
+    query = Query(client, "Sample", conditions={
+        "pid": "IS NULL"
+    }, includes="1", limit=(0, 100))
+    count = 0
+    while True:
+        samples = client.search(query)
+        for sample in samples:
+            sample.pid = "%s:%0*d" % (conf.prefix, num_digits, sample.id)
+            sample.update()
+            count += 1
+        if len(samples) < 100:
+            break
+    logger.info("%d pid attributes set", count)
+
+def cfg_setpids(subcmd):
+    help_string = "populate the pid attribute for all samples having it not set"
+    sub_cfg = subcmd.add_subconfig("setpids",
+                                   dict(help=help_string),
+                                   func=cmd_setpids)
+    sub_cfg.add_variable('prefix', ("--prefix",),
+                         dict(help="prefix to use in the dummy pid values"),
+                         default="_local")
+    sub_cfg.add_variable('force', ("--force",),
+                         dict(help="do it even if there is the risk of "
+                              "creating new conflicts"),
+                         default=False, type=icat.config.flag)
+
 # ============================== main ================================
 
 if __name__ == '__main__':
@@ -164,6 +224,7 @@ if __name__ == '__main__':
     subcmd = config.add_subcommands()
     cfg_stats(subcmd)
     cfg_lsdup(subcmd)
+    cfg_setpids(subcmd)
     client, conf = config.getconfig()
     client.login(conf.auth, conf.credentials)
     conf.subcmd.func(client, conf)
