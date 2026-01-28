@@ -5,6 +5,35 @@ This script is supposed to run various checks and maintenance tasks on
 Samples in an ICAT server.  It is mostly aimed at assisting an upgrade
 of icat.server to version 7.0 which requires the Sample.pid attribute
 to be populated with unique non-null values.
+
+The script implements the following subcommands:
+
+stats
+    Display some statistics and provide an indication whether there
+    are any obstacles for the upgrade to icat.server 7.0.
+
+lsdup
+    List all non-unique Sample.pid values along with the corresponding
+    samples.
+
+setpids
+    Populate the pid attribute for all samples having it not set.  The
+    values are of the form "<prefix>:<id>" which is guaranteed to be
+    unique unless there are any existing samples using the same
+    prefix.  These values are considered to be placeholders that may
+    be replaced by something more sensible later on.  The default
+    prefix is "_local", but this can be changed on the command line.
+
+dedup
+    Deduplicate existing pid values in samples, e.g. change them to
+    make the unique.  This is done by appending a suffix: the value
+    "<pid>" will be changed to "<pid>/dedup-<nnn>" with some
+    incermental number <nnn>.
+
+For the subcommands that set new pid values (setpids and dedup), the
+script checks whether there are any existing pid values that could
+potentially conflict with the new values to be set before making any
+changes.  In this case, the change will not be applied unless forced.
 """
 
 import logging
