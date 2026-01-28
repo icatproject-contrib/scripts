@@ -30,6 +30,12 @@ def get_pid_prefixes(client):
         prefixes.add(p)
     return prefixes
 
+def get_samples_by_pid(client, pid):
+    query = Query(client, "Sample", conditions={
+        "pid": "= '%s'" % pid
+    }, order=["id"], includes="1")
+    return client.searchChunked(query)
+
 def find_potential_upgrade_conflicts(client, prefix):
     auto_pid_re = re.compile("%s:\d+" % prefix)
     query = Query(client, "Sample", conditions={
@@ -133,11 +139,8 @@ def cmd_lsdup(client, conf):
     num_dup_pid = 0
     for pid in find_duplicate_pids(client):
         num_dup_pid += 1
-        query = Query(client, "Sample", conditions={
-            "pid": "= '%s'" % pid
-        }, order=["id"], includes=["investigation", "type"])
         dup_list = ""
-        for sample in client.searchChunked(query):
+        for sample in get_samples_by_pid(client, pid):
             dup_list += "\n\t%s" % sample_attr_string(sample)
         logger.warning("duplicate pid '%s': %s", pid, dup_list)
     if num_dup_pid:
