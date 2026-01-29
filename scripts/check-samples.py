@@ -249,7 +249,7 @@ def cmd_setpids(client, conf):
             logger.warning("potential conflicts detected, "
                            "won't proceed without force")
             return
-    num_digits = math.ceil(math.log10(get_max_sample_id(client)))+1
+    num_digits = max(math.ceil(math.log10(get_max_sample_id(client)))+1, 3)
     query = Query(client, "Sample", conditions={
         "pid": "IS NULL"
     }, includes="1")
