@@ -27,13 +27,22 @@ setpids
 dedup
     Deduplicate existing pid values in samples, e.g. change them to be
     unique.  This is done by appending a suffix: the value "<pid>"
-    will be changed to "<pid>/dedup-<nnn>" with some incermental
+    will be changed to "<pid>/dedup-<nnn>" with some incremental
     number <nnn>.
 
 For the subcommands that set new pid values (setpids and dedup), the
 script checks whether there are any existing pid values that could
 potentially conflict with the new values to be set before making any
 changes.  In this case, the change will not be applied unless forced.
+
+The script needs to be run by a user having read access to all
+samples.  While this sounds like stating the obvious, it is important
+to mention here, because obviously, the script can not point on issues
+if it is not allowed to see them.  And the script has no way to detect
+whether there are more samples than it is allowed to see.  So you
+won't get any sort of a warning if the script can't see all the
+samples.  Furthermore, for the setpids and dedup subcommands, the user
+running the scripts needs the corresponding update permissions.
 
 """
 
